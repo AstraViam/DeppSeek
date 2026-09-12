@@ -50,6 +50,84 @@ relative imports, package structure, and traceback line numbers behave exactly
 as they do in the installed package. Only `openai` is required at runtime; the
 rest degrade gracefully.
 
+## Your first session
+
+Three commands, then you are working.
+
+```powershell
+cd C:\path\to\your\project
+$env:DEEPSEEK_API_KEY = "sk-your-key"
+deppseek --doctor
+```
+
+`--doctor` is the one to run first and whenever something behaves oddly. It
+reports your interpreter, whether the key is set, whether the model ID is
+current, which MATLAB path is active, and which optional pieces are missing and
+what each costs you.
+
+### Two ways to run it
+
+**One question, then exit.** Good for a quick check, and for scripting.
+
+```powershell
+deppseek "why does case3 diverge after 200 steps?"
+deppseek "add a CFL check to the time loop and run the tests"
+```
+
+**A shell, for actual work.** Just `deppseek`. Ask in plain language; anything
+starting with `/` is a command to the tool rather than a question for the model.
+
+```
+deppseek> where is the inlet boundary condition set?
+deppseek> the residuals stall around 1e-4, find out why
+deppseek> /cost
+deppseek> /undo
+```
+
+Type `@` to complete a file path from your workspace. Alt+Enter starts a new
+line without submitting, which you want when pasting a stack trace.
+
+### What happens when you ask something
+
+The model plans, then calls tools: searching, reading files, editing them,
+running Python or MATLAB or the test suite, and reading the output. You watch it
+happen. Each tool call is checked against the permission rules before it runs,
+and every file change is checkpointed first.
+
+Under the default `autonomous` tier only three things stop and ask: deleting a
+path, moving a path, and uploading a figure to a vision endpoint. Certain shell
+commands ask too, such as `Remove-Item -Recurse` and `git reset --hard`. Reads,
+edits, test runs, and local commits proceed without interrupting you, because the
+recovery path is `/undo` rather than a prompt.
+
+If that is more rope than you want on day one, start with `--autonomy ask` and
+loosen it once you trust it.
+
+### When it does something you did not want
+
+```
+/undo            revert the last file change
+/checkpoints     see what it has changed, with ids
+/undo cp0007-... revert a specific one
+```
+
+Checkpoints are independent of git, so they work on an uncommitted tree.
+
+### Teaching it your project
+
+Put a `DEPPSEEK.md` in the project root with the things you would otherwise
+repeat every session:
+
+```markdown
+Solver is in src/solver/, cases in cases/. Always run `pytest -k unit` after
+changing the solver. Use the implicit scheme; the explicit one is legacy.
+Results in results/ are published, never edit them.
+```
+
+It is loaded into every conversation. For anything enforceable, such as making
+`results/` genuinely unwritable, use a permission rule in
+`.deppseek\config.toml` instead: a note is advice, a rule is a rule.
+
 ## Autonomy
 
 Four tiers, set with `--autonomy` or in config. The default is `autonomous`.
