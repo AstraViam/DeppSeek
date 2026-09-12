@@ -12,6 +12,8 @@ from . import (  # noqa: F401  (imported for their registration side effect)
     research,
     search,
     shell,
+    subagent,
+    todo,
     units,
 )
 from .registry import Toolbox, ToolContext, ToolResult, ToolSpec, registry, tool

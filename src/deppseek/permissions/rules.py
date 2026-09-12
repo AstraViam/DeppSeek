@@ -249,6 +249,18 @@ HARD_DENY_RULES: tuple[Rule, ...] = tuple(
 # Autonomy presets
 # ---------------------------------------------------------------------------
 
+# Tools contributed by MCP servers are named mcp__<server>__<tool>. They are
+# third-party code the user chose to run, so they are confirmed once per server
+# and then remembered for the session, rather than either prompting on every call
+# or running silently from the start. A project config can allow a trusted server
+# outright with a rule on "mcp__myserver__*".
+MCP_RULE = Rule(
+    decision=Decision.ASK,
+    tool="mcp__*",
+    reason="tool provided by a third-party MCP server; confirm once per session",
+)
+
+
 def _group(tools: tuple[str, ...], decision: Decision, reason: str) -> list[Rule]:
     return [Rule(decision=decision, tool=t, reason=reason) for t in tools]
 
@@ -289,6 +301,7 @@ def preset_rules(autonomy: str) -> tuple[Rule, ...]:
         rules += _group(GIT_WRITE_TOOLS, Decision.ASK, "git history changes are confirmed")
         rules += _group(GIT_REMOTE_TOOLS, Decision.ASK, "pushing is always confirmed")
         rules += _group(NETWORK_UPLOAD_TOOLS, Decision.ASK, "uploads workspace content off-machine")
+        rules.append(MCP_RULE)
         rules.append(Rule(Decision.ASK, "*", reason="unclassified tool"))
         return tuple(rules)
 
@@ -336,6 +349,7 @@ def preset_rules(autonomy: str) -> tuple[Rule, ...]:
         # Insert shell gates ahead of the blanket allows: first match wins.
         rules = rules[:1] + shell_rules + rules[1:]
 
+        rules.append(MCP_RULE)
         rules.append(Rule(Decision.ASK, "*", reason="unclassified tool"))
         return tuple(rules)
 
