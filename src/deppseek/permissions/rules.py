@@ -47,13 +47,14 @@ class Decision(str, Enum):
 READ_TOOLS = (
     "list_workspace", "tree", "read_file", "search_workspace", "glob_files",
     "git_status", "git_diff", "git_log", "read_notebook", "todo_write",
-    "check_units", "list_figures", "session_info",
+    "todo_read", "check_units", "convert_units", "list_figures", "session_info",
+    "matlab_status",
 )
 WRITE_TOOLS = ("write_file", "edit_file", "multi_edit", "make_directory", "edit_notebook")
 DESTRUCTIVE_TOOLS = ("delete_path", "move_path")
 EXEC_TOOLS = (
     "run_powershell", "run_python", "run_python_snippet", "run_matlab",
-    "run_tests", "matlab_workspace",
+    "run_tests", "matlab_workspace", "matlab_reset", "delegate",
 )
 # Tools whose only outbound payload is a query string or a public identifier.
 NETWORK_READ_TOOLS = ("web_search", "fetch_paper", "web_fetch")
