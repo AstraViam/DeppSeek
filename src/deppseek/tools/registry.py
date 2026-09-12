@@ -288,6 +288,8 @@ class Toolbox:
     enabled: dict[str, ToolSpec] = field(default_factory=dict)
     # Tools contributed at runtime, e.g. from MCP servers.
     dynamic: dict[str, ToolSpec] = field(default_factory=dict)
+    _specs_cache: dict[str, ToolSpec] | None = field(default=None, repr=False)
+    _schemas_cache: list[dict[str, Any]] | None = field(default=None, repr=False)
 
     @classmethod
     def build(cls, ctx: ToolContext, *, exclude: Sequence[str] = ()) -> Toolbox:
@@ -300,9 +302,21 @@ class Toolbox:
 
     def register_dynamic(self, spec: ToolSpec) -> None:
         self.dynamic[spec.name] = spec
+        self._invalidate()
+
+    def _invalidate(self) -> None:
+        self._specs_cache = None
+        self._schemas_cache = None
 
     def all_specs(self) -> dict[str, ToolSpec]:
-        return {**self.enabled, **self.dynamic}
+        """The merged tool table.
+
+        Cached because it is rebuilt on every tool call and every schema render,
+        and only changes when an MCP server contributes tools at startup.
+        """
+        if self._specs_cache is None:
+            self._specs_cache = {**self.enabled, **self.dynamic}
+        return self._specs_cache
 
     def schemas(self) -> list[dict[str, Any]]:
         """Tool schemas for the API request.
@@ -312,7 +326,13 @@ class Toolbox:
         would miss the cache on every request, multiplying input cost by roughly
         50x on the cached portion.
         """
-        return [spec.schema() for _, spec in sorted(self.all_specs().items())]
+        if self._schemas_cache is None:
+            self._schemas_cache = [
+                spec.schema() for _, spec in sorted(self.all_specs().items())
+            ]
+        # Returned as the same list object every step, so the serialised bytes
+        # are identical and the estimator's tool memo can hit.
+        return self._schemas_cache
 
     # ------------------------------------------------------------------
     def execute(self, name: str, raw_arguments: str | dict[str, Any]) -> ToolResult:

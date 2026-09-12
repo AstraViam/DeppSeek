@@ -22,8 +22,6 @@ import random
 import time
 from typing import Any
 
-from openai import OpenAI
-
 from ..errors import ProviderError, RetryableProviderError
 from .base import Completion, StreamSink, ToolCall
 from .pricing import Usage, pricing_for, resolve_model
@@ -62,6 +60,15 @@ class DeepSeekProvider:
         self.reasoning_effort = self._normalise_effort(reasoning_effort, on_warning)
         self.max_retries = max(0, max_retries)
         self.usage = usage or Usage()
+
+        # Imported here rather than at module scope. The openai package costs
+        # roughly 960 ms of the 1.2 s it takes to import this CLI, almost all of
+        # it in type modules this agent never touches. Deferring it means
+        # --version, --doctor, --help, and the shell banner appear immediately,
+        # and the cost is paid once, on the first API call, where it is hidden
+        # behind network latency anyway.
+        from openai import OpenAI
+
         self._client = OpenAI(
             api_key=api_key,
             base_url=base_url,

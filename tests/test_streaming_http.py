@@ -240,3 +240,84 @@ def test_full_stack_read_edit_and_answer(server, tmp_path):
     # The edit is undoable, which is what makes unattended writes acceptable.
     ctx.checkpoints.undo()
     assert (workspace / "solver.py").read_text() == "dt = 0.01\nnu = 1e-6\n"
+
+
+def test_every_request_extends_the_previous_one_byte_for_byte(server, tmp_path):
+    """The cost lever on DeepSeek is the context cache.
+
+    Cache-hit input tokens bill at roughly 2% of cache-miss tokens, and an agent
+    loop resends a nearly identical prefix every step, so whether the prefix is
+    byte-identical decides most of what a session costs. Anything that perturbs
+    an earlier message, a rebuilt system dict, a reordered tool list, a
+    re-serialised argument string, moves the cache boundary and turns cached
+    tokens back into billed ones.
+
+    This asserts the property directly: at every step, each message the previous
+    request sent must appear unchanged, in the same position, in the next one.
+    """
+    import json
+
+    from deppseek.agent import AgentLoop
+    from deppseek.checkpoint import CheckpointStore
+    from deppseek.config import BudgetConfig, Config
+    from deppseek.permissions import PermissionEngine
+    from deppseek.permissions.prompt import Approval, Approver
+    from deppseek.session.context import ConversationBuffer
+    from deppseek.tools import Toolbox, ToolContext
+
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    for name in ("a.py", "b.py", "c.py"):
+        (workspace / name).write_text(f"# {name}\nvalue = 1\n")
+
+    Handler.script = [
+        [
+            chunk({"reasoning_content": f"look at {name}"}),
+            chunk({"tool_calls": [{"index": 0, "id": f"c{i}", "function": {
+                "name": "read_file", "arguments": json.dumps({"path": name})}}]}),
+            chunk({}, "tool_calls"),
+        ]
+        for i, name in enumerate(("a.py", "b.py", "c.py"))
+    ] + [[chunk({"content": "All three read."}), chunk({}, "stop")]]
+
+    config = Config(
+        workspace=workspace, base_url=server,
+        budget=BudgetConfig(max_steps=10, max_cost_usd=None),
+    )
+    ctx = ToolContext(
+        workspace=workspace, config=config,
+        approver=Approver(
+            PermissionEngine(autonomy="autonomous", secret_paths=config.secret_paths),
+            ask_fn=lambda r, v: Approval(approved=True),
+        ),
+        checkpoints=CheckpointStore(workspace / ".deppseek", workspace, "cache"),
+    )
+    loop = AgentLoop(
+        provider=make_provider(server),
+        toolbox=Toolbox.build(ctx),
+        buffer=ConversationBuffer("system prompt", soft_limit=10**9, hard_limit=10**9),
+        config=config,
+    )
+    loop.run("read all three files")
+
+    assert len(Handler.requests) >= 4
+
+    for index in range(1, len(Handler.requests)):
+        previous = Handler.requests[index - 1]["messages"]
+        current = Handler.requests[index]["messages"]
+
+        assert len(current) > len(previous), "the conversation did not grow"
+        for position, message in enumerate(previous):
+            assert json.dumps(message, sort_keys=True) == json.dumps(
+                current[position], sort_keys=True
+            ), (
+                f"request {index} changed message {position} that request "
+                f"{index - 1} had already sent; this breaks the prefix cache"
+            )
+
+    # The tool schemas sit in the prefix too and must not be reordered.
+    tool_payloads = {
+        json.dumps(request.get("tools"), sort_keys=False)
+        for request in Handler.requests
+    }
+    assert len(tool_payloads) == 1, "the tool schema list changed between steps"

@@ -34,7 +34,7 @@ from .session.tokens import TokenEstimator
 from .tools import Toolbox, ToolContext
 from .tools.matlab import probe_matlab, shutdown_matlab
 from .tools.todo import render_todos
-from .ui import InlineUI, build_session, read_input
+from .ui import InlineUI
 
 COMMANDS: dict[str, str] = {
     "help": "show this list",
@@ -444,6 +444,10 @@ class Controller:
 # ---------------------------------------------------------------------------
 
 def interactive_shell(controller: Controller) -> int:
+    # Imported here so prompt_toolkit is only loaded when a line is about to be
+    # read, not on every --version or one-shot run.
+    from .ui import build_session, read_input
+
     controller.banner()
     session = build_session(
         controller.config.workspace,

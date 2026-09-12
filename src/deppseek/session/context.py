@@ -56,6 +56,11 @@ class ConversationBuffer:
         enable_compaction: bool = True,
     ) -> None:
         self.system_prompt = system_prompt
+        # Built once and reused. Constructing a fresh dict per render gave the
+        # system message a new identity every step, so it missed the estimator's
+        # memo on every call -- and the system prompt is the largest single
+        # message in a short conversation.
+        self._system_message: dict[str, Any] = {"role": "system", "content": system_prompt}
         self.estimator = estimator or TokenEstimator()
         self.soft_limit = soft_limit
         self.hard_limit = hard_limit
@@ -78,8 +83,13 @@ class ConversationBuffer:
         self.append({"role": "tool", "tool_call_id": tool_call_id, "content": content})
 
     def render(self) -> list[dict[str, Any]]:
-        """The full message list to send, system prompt first."""
-        return [{"role": "system", "content": self.system_prompt}, *self.messages]
+        """The full message list to send, system prompt first.
+
+        The system message object is reused rather than rebuilt, both so the
+        token memo can hit and so the serialised prefix is identical between
+        steps, which is what lets the provider's context cache hit.
+        """
+        return [self._system_message, *self.messages]
 
     def estimate(self, tools: list[dict[str, Any]] | None = None) -> int:
         total = self.estimator.estimate_messages(self.render())

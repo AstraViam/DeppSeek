@@ -142,6 +142,107 @@ Tool results larger than the configured cap are written to `.deppseek\output\`
 and replaced in context with a pointer plus head and tail excerpts, so one large
 file read cannot dominate the rest of the session.
 
+## Efficiency
+
+Measured, not asserted. `python scripts/benchmark.py` reproduces all of it.
+
+**Startup.** 1,222 ms to 208 ms. The `openai` package alone cost 962 ms of that,
+almost all in type modules the agent never touches, and `prompt_toolkit` another
+75 ms. Both are now imported at first use, so `--doctor`, `--version`, and
+one-shot runs never pay for them, and the API client's cost lands behind network
+latency where it is invisible.
+
+**Context accounting.** Estimating the conversation once per step re-scanned
+every earlier message, which is quadratic in session length. Per-message
+memoisation makes it linear.
+
+| Session length | Before | After |
+|---|---|---|
+| 40 steps | 997 ms | 16 ms |
+| 80 steps | 3,834 ms | 43 ms |
+| 160 steps | 16,652 ms | 126 ms |
+
+**Reading a window of a large file.** A 400-line read of a 5.7 MB, 200k-line
+result file went from 122 ms and 23 MB to 10 ms and 11 MB, by counting lines
+with `bytes.count`, locating the window with `bytes.find`, and decoding only the
+bytes inside it, instead of decoding the whole file and allocating a string per
+line.
+
+**Checkpointing.** Snapshotting a 16 MB mesh file peaks at 2 MB of memory rather
+than holding the file twice, by hashing in chunks and copying with `shutil`.
+
+**Cache hits, which is where the money is.** DeepSeek bills prompt tokens that
+hit its context cache at roughly 2% of the cache-miss rate. An agent loop
+resends a nearly identical prefix every step, so whether that prefix is
+byte-identical decides most of what a session costs. A test asserts the property
+directly: at every step, each message the previous request sent must appear
+unchanged and in the same position in the next one. It caught a real defect, a
+system-message dict rebuilt on every render.
+
+`/cost` shows the realised cache hit rate. A low number means something is
+perturbing the prefix.
+
+## How this differs from DeepSeek Harness
+
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) is
+DeepSeek's own agent runtime, published in August 2026 and MIT-licensed. If you
+have not looked at it, do: it is the official path, it has an enormous community,
+and for general coding work it is the more obvious choice.
+
+They solve different problems.
+
+| | DeepSeek Harness | DeppSeek |
+|---|---|---|
+| Scope | General agent runtime, everything is a plugin | One opinionated tool for scientific computing |
+| Runtime | TypeScript on Node.js | Python |
+| Primary interface | Local web app, plus a CLI | Terminal: inline transcript, optional dashboard |
+| Platform | Cross-platform | Windows and PowerShell |
+| Extension model | Plugins, built on Cordis | MCP servers, plus config and a project notes file |
+| Maturity | Developer preview; breaking changes expected | Stable because it is small and yours |
+
+The reason to run this instead, for your work specifically:
+
+**It lives in the Python process.** MATLAB's Engine API is a Python binding, so a
+Python agent can hold one warm MATLAB session and keep your variables alive
+between tool calls. A Node agent has to shell out to `matlab -batch` and start
+fresh every time. That single difference is most of the value here.
+
+**The domain tooling is built in, not something you write.** A warm MATLAB
+workspace, figures captured to PNG and offered for inspection, notebooks read as
+cells, dimensional analysis with pint, cache-aware cost accounting, arXiv and
+Crossref lookup. On Harness each of those is a plugin you would have to write and
+maintain.
+
+**It is terminal-first.** Harness leads with a local web app at port 3080. If you
+want a browser tab, that is a point in its favour, not against it.
+
+### On safety, honestly
+
+Both have a permission model and neither is a security boundary.
+
+Harness ships a native sandbox, read-only by default with a workspace-write mode,
+plus approval prompts. Its own `SAFETY.md` says the software "has not undergone a
+security audit and must not be treated as secure or production-ready," and that
+"sandboxing, approval prompts, and permission controls can reduce risk, but they
+do not guarantee isolation or prevent damage." In August 2026 a flaw let a
+sandboxed agent disable its own sandbox with one command
+([CVE-2026-82533](https://thehackernews.com/2026/09/deepseek-harness-flaw-let-ai-agents.html),
+rated 9.4, fixed on 27 August).
+
+DeppSeek has **no process sandbox at all**. It is a policy layer plus
+reversibility: an ordered rule engine, a denylist for credential files and
+catastrophic commands that project config cannot override, and content-addressed
+checkpoints so any file change can be taken back. That is a weaker containment
+story than OS-level scoping and a different one. It has not been audited either.
+Run it on work you have committed, and do not point it at a repository you do not
+trust.
+
+### Using both
+
+They are not exclusive. Both speak MCP, so a server you write is reachable from
+either. A reasonable split is Harness for general development and this for the
+MATLAB and simulation work where the warm workspace matters.
+
 ## Commands
 
 Type `/help` in the shell. The ones worth knowing:

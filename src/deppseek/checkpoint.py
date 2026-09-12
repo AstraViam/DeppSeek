@@ -121,6 +121,24 @@ class CheckpointStore:
 
     def _store_blob(self, data: bytes) -> str:
         digest = hashlib.sha256(data).hexdigest()
+        return self._write_blob(digest, lambda dest: dest.write_bytes(data))
+
+    def _store_file(self, source: Path) -> str:
+        """Store a file's contents without holding all of it in memory.
+
+        Snapshotting a mesh, a result set, or a .mat file otherwise loads the
+        whole thing into a bytes object just to hash it, and again to write it.
+        Hashing in chunks and copying with shutil keeps peak memory flat
+        regardless of file size, which matters when the snapshot limit is 64 MB.
+        """
+        hasher = hashlib.sha256()
+        with source.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                hasher.update(block)
+        digest = hasher.hexdigest()
+        return self._write_blob(digest, lambda dest: shutil.copyfile(source, dest))
+
+    def _write_blob(self, digest: str, write: Any) -> str:
         target = self._object_path(digest)
         if target.exists():
             return digest  # content-addressed: identical content is stored once
@@ -129,7 +147,7 @@ class CheckpointStore:
         # Write to a temp name then rename, so a crash never leaves a truncated
         # object under a hash that claims to describe complete content.
         tmp = target.with_suffix(".tmp")
-        tmp.write_bytes(data)
+        write(tmp)
         os.replace(tmp, target)
         return digest
 
@@ -181,7 +199,7 @@ class CheckpointStore:
                     )
                 )
                 continue
-            digest = self._store_blob(path.read_bytes())
+            digest = self._store_file(path)
             checkpoint.files.append(FileState(path=rel, before=digest, before_size=size))
 
         return checkpoint
@@ -191,7 +209,7 @@ class CheckpointStore:
         for entry in checkpoint.files:
             target = self.workspace / entry.path
             if target.is_file():
-                entry.after = self._store_blob(target.read_bytes())
+                entry.after = self._store_file(target)
             else:
                 entry.after = None
 

@@ -33,20 +33,26 @@ IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 
 def find_figures(ctx: ToolContext, limit: int = 50) -> list[tuple[float, Path]]:
     """Find image files in the workspace, newest first."""
+    from .fs import is_ignored
+
     found: list[tuple[float, Path]] = []
-    for path in ctx.workspace.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
-            continue
-        try:
-            relative = path.relative_to(ctx.workspace).as_posix()
-        except ValueError:
-            continue
-        if "/node_modules/" in relative or relative.startswith("node_modules/"):
-            continue
-        try:
-            found.append((path.stat().st_mtime, path))
-        except OSError:
-            continue
+    # Globbing per extension rather than walking every file: a workspace with a
+    # node_modules tree or a Simulink build directory has orders of magnitude
+    # more non-image files than image files, and rglob("*") stats all of them.
+    for suffix in IMAGE_SUFFIXES:
+        for path in ctx.workspace.rglob(f"*{suffix}"):
+            if not path.is_file():
+                continue
+            try:
+                relative = path.relative_to(ctx.workspace).as_posix()
+            except ValueError:
+                continue
+            if is_ignored(relative):
+                continue
+            try:
+                found.append((path.stat().st_mtime, path))
+            except OSError:
+                continue
     found.sort(reverse=True)
     return found[:limit]
 
