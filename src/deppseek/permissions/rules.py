@@ -51,7 +51,10 @@ READ_TOOLS = (
 )
 WRITE_TOOLS = ("write_file", "edit_file", "multi_edit", "make_directory", "edit_notebook")
 DESTRUCTIVE_TOOLS = ("delete_path", "move_path")
-EXEC_TOOLS = ("run_powershell", "run_python", "run_matlab", "run_tests")
+EXEC_TOOLS = (
+    "run_powershell", "run_python", "run_python_snippet", "run_matlab",
+    "run_tests", "matlab_workspace",
+)
 # Tools whose only outbound payload is a query string or a public identifier.
 NETWORK_READ_TOOLS = ("web_search", "fetch_paper", "web_fetch")
 # Tools that transmit workspace *content* to a third party. Distinct from the
