@@ -32,6 +32,13 @@ tui = ["textual>=0.60"]
 units = ["pint>=0.23"]
 notebook = ["nbformat>=5.9"]
 mcp = ["mcp>=1.0"]
+# MATLAB Engine API for Python, which gives a warm MATLAB workspace that
+# persists variables across tool calls. MathWorks pins each engine release to
+# one MATLAB release AND caps the interpreter: matlabengine 26.1.12 (R2026a)
+# declares python_requires ">=3.9, <3.14". The marker below keeps `pip install`
+# from failing outright on a newer interpreter; on 3.14+ the agent falls back to
+# `matlab -batch` with journal replay instead.
+matlab = ['matlabengine>=26.1,<27; python_version < "3.14"']
 all = [
   "textual>=0.60",
   "pint>=0.23",
