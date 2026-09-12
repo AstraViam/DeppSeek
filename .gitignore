@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# Agent state: sessions, checkpoints, spilled tool output, captured figures.
+.deppseek/
+!.deppseek/config.toml
+# Legacy v1 history file.
+.deepseek_agent_history.json
