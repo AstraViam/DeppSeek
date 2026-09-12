@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 from ..errors import ToolError
@@ -198,10 +199,10 @@ def run_powershell(ctx: ToolContext, command: str, timeout: int = 120) -> ToolRe
             timeout,
         )
     finally:
-        try:
+        # Best-effort cleanup: a locked or already-removed script must not mask
+        # the process result we came here for.
+        with suppress(OSError):
             os.unlink(script_path)
-        except OSError:
-            pass
 
     body = format_process_output(
         command.splitlines()[0][:100], code, stdout, stderr, elapsed, timed_out=timed_out
@@ -270,10 +271,8 @@ def run_python_snippet(ctx: ToolContext, code: str, timeout: int = 120) -> ToolR
             fh.write(code)
         result = run_process([sys.executable, script_path], ctx.workspace, timeout)
     finally:
-        try:
+        with suppress(OSError):
             os.unlink(script_path)
-        except OSError:
-            pass
 
     code_rc, stdout, stderr, elapsed, timed_out = result
     body = format_process_output(
@@ -303,7 +302,7 @@ def run_tests(
     timeout = max(1, min(timeout, ctx.config.budget.max_timeout_s))
     command = [sys.executable, "-m", "pytest", "-q", "--no-header", "--tb=short"]
     if target:
-        resolved, relative, outside = ctx.resolve(target.split("::")[0])
+        _, _, outside = ctx.resolve(target.split("::")[0])
         if outside:
             raise ToolError(f"Test target {target} resolves outside the workspace.")
         command.append(target)

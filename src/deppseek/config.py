@@ -177,13 +177,17 @@ class Config:
                 f"autonomy must be one of {AUTONOMY_TIERS}, got {self.autonomy!r}"
             )
         effort = self.reasoning_effort
-        if isinstance(effort, str) and effort not in REASONING_LEVELS:
-            # V4.1 Flash also accepts a numeric effort, so allow digit strings.
-            if not effort.isdigit():
-                raise ConfigError(
-                    f"reasoning_effort must be one of {REASONING_LEVELS} or 1-100, "
-                    f"got {effort!r}"
-                )
+        # V4.1 Flash also accepts a numeric effort, so a digit string is valid
+        # even though it is not one of the named levels.
+        if (
+            isinstance(effort, str)
+            and effort not in REASONING_LEVELS
+            and not effort.isdigit()
+        ):
+            raise ConfigError(
+                f"reasoning_effort must be one of {REASONING_LEVELS} or 1-100, "
+                f"got {effort!r}"
+            )
         if isinstance(effort, int) and not 1 <= effort <= 100:
             raise ConfigError(f"numeric reasoning_effort must be 1-100, got {effort}")
         if self.context.soft_limit >= self.context.hard_limit:

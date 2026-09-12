@@ -13,8 +13,8 @@ which is what makes a gated tier usable across a long task.
 from __future__ import annotations
 
 import difflib
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from .rules import Decision, Request, Verdict
 
@@ -67,7 +67,7 @@ def unified_diff(
     tail = max_lines - head
     omitted = len(diff) - head - tail
     return "\n".join(
-        diff[:head] + [f"... {omitted} more diff lines omitted ..."] + diff[-tail:]
+        [*diff[:head], f"... {omitted} more diff lines omitted ...", *diff[-tail:]]
     )
 
 
@@ -104,9 +104,7 @@ def format_request(request: Request, verdict: Verdict, *, max_diff_lines: int = 
             head = max_diff_lines // 2
             tail = max_diff_lines - head
             diff_lines = (
-                diff_lines[:head]
-                + [f"... {len(diff_lines) - head - tail} more diff lines omitted ..."]
-                + diff_lines[-tail:]
+                [*diff_lines[:head], f"... {len(diff_lines) - head - tail} more diff lines omitted ...", *diff_lines[-tail:]]
             )
         lines.extend(diff_lines)
     lines.append("")

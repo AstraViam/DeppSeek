@@ -19,7 +19,6 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import Literal
 
 from ..errors import ToolError
 from ..permissions.prompt import diff_stats, unified_diff

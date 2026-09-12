@@ -1,7 +1,6 @@
 """MATLAB, notebook, and figure tooling."""
 
 import json
-import sys
 
 import pytest
 
@@ -125,9 +124,8 @@ def test_engine_support_window_matches_mathworks_declaration(version, supported)
 def test_matlab_missing_executable_names_the_config_key(box):
     toolbox, _, ctx = box
     ctx.state["matlab_engine"] = False
-    from deppseek.tools.matlab import MatlabProbe
-
     import deppseek.tools.matlab as module
+    from deppseek.tools.matlab import MatlabProbe
 
     original = module.probe_matlab
     module.probe_matlab = lambda exe="matlab": MatlabProbe(
@@ -143,7 +141,7 @@ def test_matlab_missing_executable_names_the_config_key(box):
 
 
 def test_figure_inspection_without_a_vision_model_refuses_rather_than_inventing(box):
-    toolbox, workspace, ctx = box
+    toolbox, workspace, _ctx = box
     (workspace / "plot.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
 
     result = toolbox.execute("inspect_figure", {"path": "plot.png"})

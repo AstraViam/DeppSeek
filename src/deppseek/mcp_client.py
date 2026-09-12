@@ -15,6 +15,7 @@ config can allow or deny a whole server with one glob.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
@@ -75,7 +76,7 @@ class McpServer:
     def start(self) -> None:
         merged_env = {**os.environ, **self.env}
         try:
-            self.process = subprocess.Popen(  # noqa: S603 - the user configured this
+            self.process = subprocess.Popen(
                 [self.command, *self.args],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -124,7 +125,7 @@ class McpServer:
         if self.process is None or self.process.poll() is not None:
             raise McpError(
                 f"MCP server {self.name!r} is not running."
-                + (f" Last stderr:\n" + "\n".join(self._stderr_tail[-8:]) if self._stderr_tail else "")
+                + (" Last stderr:\n" + "\n".join(self._stderr_tail[-8:]) if self._stderr_tail else "")
             )
 
         with self._lock:
@@ -145,7 +146,7 @@ class McpServer:
                 if not line:
                     raise McpError(
                         f"MCP server {self.name!r} closed its output unexpectedly."
-                        + (f" stderr:\n" + "\n".join(self._stderr_tail[-8:]) if self._stderr_tail else "")
+                        + (" stderr:\n" + "\n".join(self._stderr_tail[-8:]) if self._stderr_tail else "")
                     )
                 try:
                     message = json.loads(line)
@@ -222,10 +223,8 @@ class McpServer:
             self.process.terminate()
             self.process.wait(timeout=5)
         except (OSError, subprocess.TimeoutExpired):
-            try:
+            with contextlib.suppress(OSError):
                 self.process.kill()
-            except OSError:
-                pass
         finally:
             self.process = None
 
@@ -278,7 +277,7 @@ class McpManager:
             count += 1
         return count
 
-    def _build_spec(self, mcp_tool: McpTool, ToolSpec, ToolResult):  # noqa: N803
+    def _build_spec(self, mcp_tool: McpTool, ToolSpec, ToolResult):
         server = self.servers[mcp_tool.server]
 
         def invoke(ctx, **arguments):

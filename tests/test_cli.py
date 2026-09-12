@@ -160,7 +160,7 @@ def test_session_is_saved_and_resumable(controller):
     assert controller.buffer.messages == []
 
     controller.handle_command(f"/resume {session_id}")
-    assert any("analyse the mesh" == m.get("content") for m in controller.buffer.messages)
+    assert any(m.get("content") == "analyse the mesh" for m in controller.buffer.messages)
 
 
 def test_resume_repairs_a_malformed_session(controller):

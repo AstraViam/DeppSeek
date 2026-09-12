@@ -10,7 +10,6 @@ without a path list stages only files the agent itself modified this session.
 from __future__ import annotations
 
 import shutil
-from pathlib import Path
 
 from ..errors import ToolError
 from .registry import ToolContext, ToolResult, tool

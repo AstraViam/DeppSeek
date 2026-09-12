@@ -12,7 +12,8 @@ is the difference between watching the work and hunting through scrollback.
 
 from __future__ import annotations
 
-from typing import Any
+import contextlib
+from typing import Any, ClassVar
 
 try:
     from textual.app import App, ComposeResult
@@ -81,7 +82,9 @@ class DeppSeekTUI(App):  # type: ignore[misc]
     """Dashboard driven by the same agent events as the inline UI."""
 
     CSS = CSS
-    BINDINGS = [
+    # Textual reads BINDINGS off the class, so it stays a class attribute and is
+    # annotated rather than moved into __init__.
+    BINDINGS: ClassVar[list[Any]] = [
         ("ctrl+c", "interrupt", "Interrupt"),
         ("ctrl+d", "quit", "Quit"),
         ("ctrl+l", "clear_transcript", "Clear"),
@@ -166,10 +169,8 @@ class TuiSink:
         self._reasoning_shown = False
 
     def _safe(self, func, *args: Any, **kwargs: Any) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.app.call_from_thread(func, *args, **kwargs)
-        except Exception:  # noqa: BLE001 - a shutting-down app must not crash the run
-            pass
 
     def on_reasoning(self, delta: str) -> None:
         if not self._reasoning_shown:

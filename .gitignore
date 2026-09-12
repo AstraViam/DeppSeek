@@ -11,7 +11,8 @@ venv/
 .coverage
 htmlcov/
 # Agent state: sessions, checkpoints, spilled tool output, captured figures.
-.deppseek/
-!.deppseek/config.toml
+# The example config is checked in; a real one is the user's own business.
+.deppseek/*
+!.deppseek/config.toml.example
 # Legacy v1 history file.
 .deepseek_agent_history.json

@@ -127,7 +127,7 @@ def test_independent_reads_run_in_parallel(harness):
 
 def test_mutating_tools_are_serialised(harness):
     """Two concurrent edits to one file is a race with no upside."""
-    _, _, _, workspace = harness
+    _, _, _, _workspace = harness
     events = []
     completions = [
         Completion(
@@ -149,7 +149,7 @@ def test_step_limit_stops_with_an_explanation(harness):
         Completion(tool_calls=[ToolCall(id=f"c{i}", name="git_status", arguments="{}")])
         for i in range(20)
     ]
-    toolbox, buffer, config, workspace = harness
+    toolbox, buffer, config, _workspace = harness
     provider = ScriptedProvider(completions)
     loop = AgentLoop(provider=provider, toolbox=toolbox, buffer=buffer, config=config)
     result = loop.run("loop forever", max_steps=3)

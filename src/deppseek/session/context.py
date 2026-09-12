@@ -22,8 +22,9 @@ enough that the cache saving dwarfs its cost.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from .tokens import TokenEstimator
 
@@ -158,7 +159,7 @@ class ConversationBuffer:
         if summarise is not None:
             try:
                 summary_text = summarise(old_messages)
-            except Exception:  # noqa: BLE001 - compaction must not fail the run
+            except Exception:  # noqa: BLE001 - compaction must never fail the run
                 summary_text = ""
         if not summary_text:
             summary_text = structural_summary(old_messages)

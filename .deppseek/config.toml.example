@@ -1,0 +1,83 @@
+# DeppSeek project configuration.
+#
+# Copy this to .deppseek/config.toml and edit. Settings here apply to this
+# project only and override your user-level file at %USERPROFILE%\.deppseek\config.toml.
+# Command-line flags override both.
+
+# deepseek-flash (V4.1 Flash) or deepseek-v4-pro.
+model = "deepseek-flash"
+
+# Extended reasoning. Effort is low/high/max, or 1-100 on models that accept a
+# numeric value (deepseek-flash does; deepseek-v4-pro does not and is mapped to
+# the nearest named level).
+thinking = true
+reasoning_effort = "high"
+
+# readonly   no side effects at all
+# ask        confirm every side effect
+# standard   writes run unattended, execution is confirmed
+# autonomous writes and execution run unattended; deletes, pushes, and uploads
+#            still stop. Recovery is checkpoints plus git, not prompts.
+autonomy = "autonomous"
+
+[budget]
+max_cost_usd = 5.0      # per run; null for no ceiling
+max_steps = 40
+default_timeout_s = 120
+
+[context]
+# Compaction triggers at soft_limit. Set well below hard_limit so compaction
+# stays rare: it invalidates the provider's prefix cache for one request.
+soft_limit = 420000
+hard_limit = 960000
+max_tool_result_chars = 24000
+keep_recent_turns = 8
+
+[matlab]
+# Leave exe as "matlab" to auto-detect under Program Files.
+exe = "matlab"
+prefer_engine = true
+capture_figures = true
+default_timeout_s = 300
+
+[ui]
+mode = "inline"         # inline or tui
+show_reasoning = true
+reasoning_lines = 6
+syntax_theme = "monokai"
+max_diff_lines = 160
+
+# Looking at generated plots needs a multimodal endpoint, since DeepSeek's text
+# models are not multimodal. Any OpenAI-compatible vision API works.
+# [vision]
+# base_url = "https://api.openai.com/v1"
+# model = "gpt-4o-mini"
+# api_key_env = "DEPPSEEK_VISION_API_KEY"
+
+# Paper lookup via arXiv and Crossref needs no key and always works.
+# General web search needs a provider.
+# [search]
+# provider = "brave"    # brave, tavily, or serper
+# api_key_env = "DEPPSEEK_SEARCH_API_KEY"
+
+# MCP servers. Their tools appear as mcp__<name>__<tool> and ask for
+# confirmation once per session unless a rule below allows them outright.
+# [mcp.servers.filesystem]
+# command = "npx"
+# args = ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
+[permissions]
+# Rules are evaluated in order, first match wins, and beat the autonomy preset.
+# They cannot override the built-in denylist for credential files and
+# catastrophic system commands.
+#
+# [[permissions.rules]]
+# decision = "deny"
+# tool = "*"
+# path = "results/**"
+# reason = "published results are read-only"
+#
+# [[permissions.rules]]
+# decision = "allow"
+# tool = "mcp__myserver__*"
+# reason = "vetted internally"

@@ -46,7 +46,7 @@ def _http_get(url: str, *, timeout: int, user_agent: str, accept: str = "*/*") -
         url, headers={"User-Agent": user_agent, "Accept": accept}
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             charset = response.headers.get_content_charset() or "utf-8"
             return FetchResult(response.read().decode(charset, errors="replace"), response.status)
     except urllib.error.HTTPError as exc:
@@ -85,7 +85,6 @@ def fetch_paper(ctx: ToolContext, identifier: str, max_results: int = 5) -> Tool
             or free-text title keywords.
         max_results: How many results to return for a keyword search.
     """
-    search = ctx.config.search
     identifier = identifier.strip()
     max_results = max(1, min(max_results, 20))
 
@@ -232,7 +231,7 @@ def web_search(ctx: ToolContext, query: str, max_results: int = 0) -> ToolResult
         raise ToolError(f"Unknown search provider {search.provider!r}.")
 
     try:
-        with urllib.request.urlopen(request, timeout=search.timeout_s) as response:  # noqa: S310
+        with urllib.request.urlopen(request, timeout=search.timeout_s) as response:
             payload = json.loads(response.read().decode("utf-8", errors="replace"))
     except urllib.error.HTTPError as exc:
         raise ToolError(f"Search provider returned HTTP {exc.code}: {exc.reason}") from exc

@@ -229,7 +229,7 @@ def test_mutations_are_checkpointed_and_undoable(box):
 
 
 def test_modified_paths_are_tracked_for_commit_staging(box):
-    toolbox, workspace, ctx = box
+    toolbox, _workspace, ctx = box
     toolbox.execute("write_file", {"path": "new.py", "content": "x\n"})
     assert "new.py" in ctx.state.get("modified_paths", set())
 

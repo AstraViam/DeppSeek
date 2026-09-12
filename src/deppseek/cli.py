@@ -420,7 +420,7 @@ class Controller:
             f"thinking         {self.config.thinking} (effort {self.config.reasoning_effort})",
             f"autonomy         {self.config.autonomy}",
             f"max steps        {self.config.budget.max_steps}",
-            f"cost ceiling     "
+            "cost ceiling     "
             + (f"${self.config.budget.max_cost_usd:.2f}" if self.config.budget.max_cost_usd else "none"),
             f"context soft/hard {self.config.context.soft_limit:,} / {self.config.context.hard_limit:,}",
             f"parallel tools   {self.config.max_parallel_tools}",

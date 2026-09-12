@@ -27,6 +27,7 @@ simply fails and the batch path is used, which `matlab_status` explains.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import shutil
@@ -117,7 +118,7 @@ def probe_matlab(
         engine_importable = True
     except ImportError as exc:
         engine_error = str(exc)
-    except Exception as exc:  # noqa: BLE001 - a broken install must not crash startup
+    except Exception as exc:  # noqa: BLE001 - a broken engine install must not crash startup
         engine_error = f"{type(exc).__name__}: {exc}"
 
     found = shutil.which(executable)
@@ -191,7 +192,7 @@ class WarmEngine:
         out, err = io.StringIO(), io.StringIO()
         try:
             self.engine.eval(command, nargout=0, stdout=out, stderr=err)
-        except Exception as exc:  # noqa: BLE001 - MATLABExecutionError and friends
+        except Exception as exc:  # noqa: BLE001 - MATLABExecutionError and kin are not importable here
             err.write(f"\n{type(exc).__name__}: {exc}")
 
         figures: list[str] = []
@@ -239,15 +240,13 @@ class WarmEngine:
         out, err = io.StringIO(), io.StringIO()
         try:
             self.engine.eval("whos", nargout=0, stdout=out, stderr=err)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 - listing variables must not fail the call
             return f"Could not list variables: {exc}"
         return out.getvalue() or "(workspace is empty)"
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.engine.quit()
-        except Exception:  # noqa: BLE001 - shutting down must never raise
-            pass
 
 
 def _escape(path: str) -> str:
@@ -269,7 +268,7 @@ def get_engine(ctx: ToolContext) -> WarmEngine | None:
         return None
     try:
         engine = WarmEngine(ctx.workspace)
-    except Exception as exc:  # noqa: BLE001 - a failed start falls back to batch
+    except Exception as exc:  # noqa: BLE001 - a failed engine start falls back to batch
         ctx.state[ENGINE_STATE_KEY] = False
         ctx.state["matlab_engine_error"] = str(exc)
         return None

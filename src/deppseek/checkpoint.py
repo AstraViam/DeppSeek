@@ -27,9 +27,10 @@ import json
 import os
 import shutil
 import time
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .errors import DeppSeekError
 

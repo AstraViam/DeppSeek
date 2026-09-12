@@ -142,7 +142,7 @@ def _search_with_ripgrep(
     if not lines:
         return ToolResult(
             content=f"No matches for {pattern!r}" + (f" in {glob}" if glob else "") + ".",
-            display=f"search: 0 matches",
+            display="search: 0 matches",
         )
     trimmed = lines[:max_results]
     note = (
@@ -185,9 +185,14 @@ def _search_in_python(
             continue
         if spec is not None and spec.match_file(relative):
             continue
-        if not glob and path.suffix.lower() not in TEXT_EXTENSIONS:
-            if path.name.lower() not in {"readme", "license", "makefile", "dockerfile"}:
-                continue
+        # Without an explicit glob, restrict to known text extensions plus the
+        # handful of conventionally extensionless files worth searching.
+        if (
+            not glob
+            and path.suffix.lower() not in TEXT_EXTENSIONS
+            and path.name.lower() not in {"readme", "license", "makefile", "dockerfile"}
+        ):
+            continue
         try:
             if path.stat().st_size > MAX_FILE_BYTES:
                 continue

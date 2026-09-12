@@ -19,7 +19,7 @@ account is authoritative; `usage` totals from the API are exact token counts.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from typing import Any
 
 # Off-peak discount window, UTC. DeepSeek discounts requests that start inside
@@ -109,8 +109,8 @@ def pricing_for(model: str) -> ModelPricing:
 
 def is_off_peak(moment: datetime | None = None) -> bool:
     """True when `moment` falls inside the off-peak discount window."""
-    moment = moment or datetime.now(timezone.utc)
-    now = moment.astimezone(timezone.utc).time()
+    moment = moment or datetime.now(UTC)
+    now = moment.astimezone(UTC).time()
     # The window wraps midnight, so it is a union of two ranges.
     return now >= OFF_PEAK_START or now < OFF_PEAK_END
 

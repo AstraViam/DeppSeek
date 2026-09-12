@@ -12,7 +12,7 @@ matters when pasting a MATLAB snippet or a stack trace.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 try:
     from prompt_toolkit import PromptSession
@@ -62,7 +62,7 @@ class WorkspaceCompleter(Completer):  # type: ignore[misc]
         self._cache_stamp = time.monotonic()
         return found
 
-    def get_completions(self, document, complete_event):  # noqa: ANN001
+    def get_completions(self, document, complete_event):
         text = document.text_before_cursor
 
         if text.startswith("/") and " " not in text:
@@ -97,7 +97,7 @@ def build_session(
     bindings = KeyBindings()
 
     @bindings.add("escape", "enter")
-    def _(event):  # noqa: ANN001
+    def _(event):
         """Alt+Enter inserts a literal newline rather than submitting."""
         event.current_buffer.insert_text("\n")
 

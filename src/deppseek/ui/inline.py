@@ -12,7 +12,7 @@ long chain of thought does not bury the result.
 
 from __future__ import annotations
 
-import os
+import contextlib
 import shutil
 import sys
 from typing import Any
@@ -22,9 +22,9 @@ from .theme import build_theme, glyphs_for
 
 try:
     from rich.console import Console, Group
+    from rich.live import Live
     from rich.markdown import Markdown
     from rich.panel import Panel
-    from rich.live import Live
     from rich.syntax import Syntax
     from rich.table import Table
     from rich.text import Text
@@ -150,10 +150,8 @@ class InlineUI:
                 sys.stdout.write(self._buffer[-1])
                 sys.stdout.flush()
             return
-        try:
+        with contextlib.suppress(Exception):
             self._live.update(self._render())
-        except Exception:  # noqa: BLE001 - a render failure must not kill the run
-            pass
 
     def _render(self):
         g = self.glyphs
@@ -198,7 +196,7 @@ class InlineUI:
         try:
             self._live.update(self._render_final())
             self._live.stop()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 - a render failure must not kill the run
             pass
         finally:
             self._live = None
@@ -210,7 +208,7 @@ class InlineUI:
         body = "".join(self._buffer)
         try:
             return Markdown(body, code_theme=self.config.ui.syntax_theme)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 - a render failure must not lose the response
             return Text(body, style="ds.assistant")
 
     # ------------------------------------------------------------------
@@ -236,9 +234,7 @@ class InlineUI:
                 f"[ds.muted]  running {payload['count']} tools in parallel "
                 f"({payload['workers']} workers)[/]"
             )
-        elif event == "compacted":
-            self._print(f"[ds.warn]{g.bullet} {payload['message']}[/]")
-        elif event == "budget":
+        elif event == "compacted" or event == "budget":
             self._print(f"[ds.warn]{g.bullet} {payload['message']}[/]")
         elif event == "error":
             self._print(f"[ds.error]{g.cross} {payload['message']}[/]")
@@ -262,7 +258,7 @@ class InlineUI:
             try:
                 self.console.print(Markdown(text, code_theme=self.config.ui.syntax_theme))
                 return
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 - malformed markdown must still print as text
                 pass
         print(text)
 

@@ -29,8 +29,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin, get_type_hints
 
-from ..errors import ToolError, ToolNotFound
-from ..permissions import Decision, Request
+from ..errors import ToolError
+from ..permissions import Request
 from ..secrets import redact
 
 JSON_TYPES = {
@@ -215,7 +215,7 @@ def _build_schema(func: Callable[..., Any], arg_docs: dict[str, str]) -> dict[st
     signature = inspect.signature(func)
     try:
         hints = get_type_hints(func)
-    except Exception:  # noqa: BLE001 - a bad annotation must not kill registration
+    except Exception:  # noqa: BLE001 - a bad annotation must not break registration
         hints = {}
 
     properties: dict[str, Any] = {}

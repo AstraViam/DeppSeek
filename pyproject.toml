@@ -70,8 +70,16 @@ target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+# BLE is enabled deliberately. A broad `except Exception` is sometimes correct
+# here -- a tool bug must not kill the agent loop, a UI render failure must not
+# lose a completed response -- but each one should have to justify itself in a
+# noqa comment rather than accumulating silently.
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "BLE"]
 ignore = ["E501", "B008", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately assert on internals and build throwaway fixtures.
+"tests/*" = ["BLE", "RUF059"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -79,6 +87,14 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 ignore_missing_imports = true
 files = ["src/deppseek"]
+
+# These modules import an optional dependency and define a stub fallback when it
+# is absent. Whether a given `type: ignore` is redundant therefore depends on
+# which extras are installed in the checking environment, so the redundancy
+# warning is not meaningful here.
+[[tool.mypy.overrides]]
+module = ["deppseek.ui.tui", "deppseek.ui.input", "deppseek.ui.inline"]
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

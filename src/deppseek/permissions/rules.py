@@ -30,14 +30,14 @@ from __future__ import annotations
 import fnmatch
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..errors import ConfigError
 
 
-class Decision(str, Enum):
+class Decision(StrEnum):
     ALLOW = "allow"
     ASK = "ask"
     DENY = "deny"

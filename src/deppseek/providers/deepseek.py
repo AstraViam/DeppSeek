@@ -16,6 +16,7 @@ Notable behaviour, all of it load-bearing:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import random
 import time
@@ -146,7 +147,7 @@ class DeepSeekProvider:
                 time.sleep(delay)
             except ProviderError:
                 raise
-            except Exception as exc:  # noqa: BLE001 - classify unknown SDK errors
+            except Exception as exc:
                 classified = _classify(exc)
                 if isinstance(classified, RetryableProviderError) and attempt < self.max_retries:
                     last_error = classified
@@ -240,17 +241,15 @@ class DeepSeekProvider:
                         announced.add(index)
                         if sink is not None:
                             sink.on_tool_call_start(slot["name"])
-        except Exception as exc:  # noqa: BLE001 - a mid-stream drop is retryable
+        except Exception as exc:
             raise _classify(exc) from exc
         finally:
             if sink is not None:
                 sink.on_done()
             close = getattr(stream, "close", None)
             if callable(close):
-                try:
+                with contextlib.suppress(Exception):
                     close()
-                except Exception:  # noqa: BLE001 - closing must never mask the result
-                    pass
 
         if final_usage is not None:
             self.usage.add_response(_UsageCarrier(final_usage), self.model)
@@ -288,7 +287,7 @@ def _backoff(attempt: int, base: float = 1.5, cap: float = 30.0) -> float:
     retrying after the same rate limit do not synchronise into another burst.
     """
     ceiling = min(cap, base * (2**attempt))
-    return random.uniform(0.0, ceiling)  # noqa: S311 - jitter, not cryptography
+    return random.uniform(0.0, ceiling)
 
 
 def _classify(exc: Exception) -> ProviderError:

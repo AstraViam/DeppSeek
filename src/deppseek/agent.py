@@ -18,14 +18,16 @@ Differences from v1 that change how the thing feels to use:
 
 from __future__ import annotations
 
+import contextlib
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from .errors import BudgetExceeded, ProviderError
-from .providers.base import Completion, NullSink, StreamSink, ToolCall
 from .prompts import SUMMARISER_PROMPT
+from .providers.base import Completion, NullSink, StreamSink, ToolCall
 from .session.context import ConversationBuffer
 from .tools.registry import ToolResult
 
@@ -80,10 +82,8 @@ class AgentLoop:
         `event` is positional-only: several payloads carry their own "name" key
         (the tool being run), which would otherwise collide with the parameter.
         """
-        try:
+        with contextlib.suppress(Exception):
             self.on_event(event, payload)
-        except Exception:  # noqa: BLE001 - a UI bug must not kill the run
-            pass
 
     def _check_budget(self, step: int, max_steps: int) -> None:
         budget = self.config.budget
@@ -99,11 +99,13 @@ class AgentLoop:
                 f"(estimated ${spent:.4f} spent this run). Raise it with "
                 f"--max-cost or in .deppseek/config.toml."
             )
-        if budget.max_total_tokens is not None:
-            if self.provider.usage.total_tokens >= budget.max_total_tokens:
-                raise BudgetExceeded(
-                    f"Reached the token ceiling of {budget.max_total_tokens:,}."
-                )
+        if (
+            budget.max_total_tokens is not None
+            and self.provider.usage.total_tokens >= budget.max_total_tokens
+        ):
+            raise BudgetExceeded(
+                f"Reached the token ceiling of {budget.max_total_tokens:,}."
+            )
 
     def _maybe_compact(self, tools: list[dict[str, Any]]) -> bool:
         if not self.buffer.needs_compaction(tools):

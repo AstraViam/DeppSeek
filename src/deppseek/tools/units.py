@@ -40,7 +40,7 @@ def check_units(ctx: ToolContext, expression: str, expected: str = "") -> ToolRe
     registry = _registry()
     try:
         value = registry.parse_expression(expression)
-    except Exception as exc:  # noqa: BLE001 - pint raises many parse error types
+    except Exception as exc:
         raise ToolError(
             f"Could not parse {expression!r}: {exc}. "
             f"Write quantities as `value * unit`, e.g. `2.5 * m/s`."
@@ -51,7 +51,7 @@ def check_units(ctx: ToolContext, expression: str, expected: str = "") -> ToolRe
         base = value.to_base_units()
         lines.append(f"SI base:    {base:~P}")
         lines.append(f"Dimensions: {value.dimensionality}")
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 - pint raises many distinct parse error types
         pass
 
     if expected:
@@ -84,7 +84,7 @@ def convert_units(ctx: ToolContext, value: float, from_unit: str, to_unit: str) 
     try:
         quantity = registry.Quantity(value, from_unit)
         converted = quantity.to(to_unit)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise ToolError(f"Cannot convert {value} {from_unit} to {to_unit}: {exc}") from exc
     return ToolResult(
         content=f"{quantity:~P} = {converted:~P}",

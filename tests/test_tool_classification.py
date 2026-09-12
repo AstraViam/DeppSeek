@@ -17,7 +17,6 @@ from deppseek.permissions.rules import (
     NETWORK_UPLOAD_TOOLS,
     READ_TOOLS,
     WRITE_TOOLS,
-    Decision,
     PermissionEngine,
     Request,
 )

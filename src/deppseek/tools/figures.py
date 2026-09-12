@@ -160,7 +160,7 @@ def inspect_figure(ctx: ToolContext, path: str, question: str = "") -> ToolResul
                 }
             ],
         )
-    except Exception as exc:  # noqa: BLE001 - any provider failure is reportable
+    except Exception as exc:
         raise ToolError(f"Vision request failed: {exc}") from exc
 
     description = (response.choices[0].message.content or "").strip()
